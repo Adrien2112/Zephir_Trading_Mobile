@@ -1,12 +1,8 @@
 package com.example.zephir_trading_android
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.app.PendingIntent
-import android.os.Environment
 import android.util.Log
 import android.os.Handler
 import android.os.Looper
@@ -21,14 +17,13 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.squareup.picasso.Picasso
 import java.io.File
-import android.net.Uri
 import android.graphics.Bitmap
 import java.io.FileOutputStream
-import java.io.InputStream
-import java.io.OutputStream
 import java.io.IOException
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -65,13 +60,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun downloadAndStoreImage(url: String, asset: String, side: String, timestamp: String) {
-        Log.d("FCM", "Downloading image from URL: $url")
-        val gsUrl = if (url.startsWith("https://storage.googleapis.com/")) {
-            "gs://" + url.substringAfter("https://storage.googleapis.com/")
-        } else {
-            Log.e("FCM", "Invalid URL format: $url")
-            return
-        }
+        Log.d("FCM", "Downloading from URL: $url")
         val sanitizedTimestamp = timestamp.replace(":", "").replace(" ", "_")
         val fileName = "image_${asset}_$sanitizedTimestamp.jpg"
         val assetSubfolder = File(getExternalFilesDir(null), asset)
@@ -80,41 +69,60 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
         val file = File(assetSubfolder, fileName)
 
-        val storageReference: StorageReference = FirebaseStorage.getInstance().getReferenceFromUrl(gsUrl)
-        storageReference.getDownloadUrl().addOnSuccessListener { downloadUrl ->
-            Log.d("FCM", "Download URL: $downloadUrl")
+        attemptDownload(url, file, 0)
+    }
 
-                Handler(Looper.getMainLooper()).post {
-                    try {
-                        Picasso.get().load(downloadUrl.toString()).into(object : com.squareup.picasso.Target {
-                            override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
-                                try {
-                                    val outputStream = FileOutputStream(file)
-                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                    outputStream.flush()
-                                    outputStream.close()
-                                    Log.d("FCM", "Image successfully saved to $file")
-                                } catch (e: IOException) {
-                                    Log.e("FCM", "Error saving image", e)
-                                }
-                            }
+    private fun attemptDownload(url: String, file: File, attempt: Int) {
+        if (attempt >= MAX_RETRY_ATTEMPTS) {
+            Log.e("FCM", "Max retry attempts reached for downloading image")
+            return
+        }
 
-                            override fun onBitmapFailed(e: Exception, errorDrawable: Drawable?) {
-                                Log.e("FCM", "Bitmap load failed", e)
+        Handler(Looper.getMainLooper()).post {
+            try {
+                Glide.with(this@MyFirebaseMessagingService)
+                    .asBitmap()
+                    .load(url)
+                    .into(object : CustomTarget<Bitmap>() {
+                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                            Log.d("FCM", "Image loaded successfully")
+                            try {
+                                val outputStream = FileOutputStream(file)
+                                resource.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                                outputStream.flush()
+                                outputStream.close()
+                                Log.d("FCM", "Image successfully saved to $file")
+                            } catch (e: IOException) {
+                                Log.e("FCM", "Error saving image", e)
                             }
+                        }
 
-                            override fun onPrepareLoad(placeHolderDrawable: Drawable?) {
-                                // Handle preparations for loading bitmap
-                            }
-                        })
-                    } catch (e: Exception) {
-                        // Handle general Picasso loading errors
-                    }
-                }
-        }.addOnFailureListener { exception ->
-            Log.e("FCM", "Error getting download URL", exception)
+                        override fun onLoadFailed(errorDrawable: Drawable?) {
+                            Log.e("FCM", "Failed to load image", null)
+                            val waitTime = calculateExponentialBackoff(attempt)
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                attemptDownload(url, file, attempt + 1)
+                            }, waitTime)
+                        }
+
+                        override fun onLoadCleared(placeholder: Drawable?) {
+                            // Cleanup resources if needed
+                        }
+                    })
+            } catch (e: Exception) {
+                Log.e("FCM", "Error loading image with Glide", e)
+            }
         }
     }
+
+    private fun calculateExponentialBackoff(attempt: Int): Long {
+        return (Math.pow(2.0, attempt.toDouble()) * 2000).toLong() // Augmenter le délai de base à 2000 ms
+    }
+
+    companion object {
+        private const val MAX_RETRY_ATTEMPTS = 5
+    }
+
 
     private fun storeMessage(asset: String, timestamp: String, side: String, url: String) {
         Log.d("FCM", "Storing message in database: asset=$asset, timestamp=$timestamp, side=$side, url=$url")
