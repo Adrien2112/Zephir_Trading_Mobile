@@ -49,8 +49,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
                 Log.d("FCM", "Processing message: title=$title, asset=$asset, timestamp=$timestamp, side=$side, url=$url")
 
-                downloadAndStoreImage(url, asset, side, timestamp)
-                storeMessage(asset, timestamp, side, url)
+                val file = downloadAndStoreImage(url, asset, side, timestamp)
+                storeMessage(asset, timestamp, side, url, file)
 
                 sendNotification(title, asset, side, timestamp)
             }
@@ -59,7 +59,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun downloadAndStoreImage(url: String, asset: String, side: String, timestamp: String) {
+    private fun downloadAndStoreImage(url: String, asset: String, side: String, timestamp: String): File {
         Log.d("FCM", "Downloading from URL: $url")
         val sanitizedTimestamp = timestamp.replace(":", "").replace(" ", "_")
         val fileName = "image_${asset}_$sanitizedTimestamp.jpg"
@@ -70,6 +70,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val file = File(assetSubfolder, fileName)
 
         attemptDownload(url, file, 0)
+        
+        return file
     }
 
     private fun attemptDownload(url: String, file: File, attempt: Int) {
@@ -124,7 +126,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
 
-    private fun storeMessage(asset: String, timestamp: String, side: String, url: String) {
+    private fun storeMessage(asset: String, timestamp: String, side: String, url: String, file: File) { 
+
         Log.d("FCM", "Storing message in database: asset=$asset, timestamp=$timestamp, side=$side, url=$url")
         val dbHelper = DBHelper(this.applicationContext)
         val db = dbHelper.writableDatabase
@@ -133,6 +136,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             put("timestamp", timestamp)
             put("side", side)
             put("url", url)
+            put("filePath", file.absolutePath)
         }
         db.insert("Messages", null, values)
         db.close()

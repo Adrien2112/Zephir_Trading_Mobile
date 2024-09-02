@@ -19,7 +19,20 @@
         android:layout_below="@id/logoImageView"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
-        android:text="Login"
+        android:text="Get Token"
+        android:background="@drawable/button_gold_background"
+        android:textColor="#FF000000"
+        android:textSize="16sp"
+        android:padding="12dp" />
+
+    <Button
+        android:id="@+id/signalsButton"
+        android:layout_width="150dp"
+        android:layout_height="50dp"
+        android:layout_below="@id/loginButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:text="Signals"
         android:background="@drawable/button_gold_background"
         android:textColor="#FF000000"
         android:textSize="16sp"

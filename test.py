@@ -27,7 +27,7 @@ if __name__ == "__main__":
         "asset" : "EURUSD",
         "timestamp" : "2024-08-31 14:38:22",
         "side" : "LONG",
-        "url" : "https://firebasestorage.googleapis.com/v0/b/zephir-trading-firebase.appspot.com/o/zephir.png?alt=media&token=24b0de0c-2b98-4602-bb2c-c81c217720af"
+        "url" : "https://firebasestorage.googleapis.com/v0/b/zephir-trading-firebase.appspot.com/o/zephir.png?alt=media&token=340b9968-4e11-46d1-84be-a9a818f5b94a"
     }
 
     send_fcm_message(TOPIC_NAME, data)

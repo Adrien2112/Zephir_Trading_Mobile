@@ -1,0 +1,9 @@
+   <!-- res/layout/list_item.xml -->
+   <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+       android:id="@+id/text1"
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:textSize="18sp"
+       android:gravity="center_vertical"
+       android:padding="8dp"
+       android:textColor="#FFFFFF" /> <!-- Couleur blanche pour tester -->

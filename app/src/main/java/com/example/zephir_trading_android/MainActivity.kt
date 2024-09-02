@@ -31,5 +31,12 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
         }
+
+        val signalsButton = findViewById<Button>(R.id.signalsButton)
+        signalsButton.visibility = View.VISIBLE
+        signalsButton.setOnClickListener {
+            val intent = Intent(this, SignalsActivity::class.java)
+            startActivity(intent)
+        }
     }
 }
